@@ -105,10 +105,15 @@ const Index = () => {
     });
   };
 
+  // Generate suggestions for search
+  const gameSuggestions = games
+    .filter(game => game.section === activeSection)
+    .map(game => game.title);
+
   const filteredAndSortedGames = games
     .filter(game => 
       game.section === activeSection &&
-      game.title.toLowerCase().includes(searchQuery.toLowerCase())
+      (searchQuery === '' || game.title.toLowerCase().includes(searchQuery.toLowerCase()))
     )
     .sort((a, b) => {
       switch (sortBy) {
@@ -125,16 +130,16 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-6 max-w-4xl">
+      <div className="container mx-auto px-4 py-4 sm:py-6 max-w-4xl">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 sm:mb-8 gap-4">
           <div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+            <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
               Speedrun Organizer
             </h1>
-            <p className="text-muted-foreground mt-1">Track your personal bests and plan your next runs</p>
+            <p className="text-muted-foreground mt-1 text-sm">Track your personal bests and plan your next runs</p>
           </div>
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center gap-4">
             <div className="flex items-center space-x-2">
               <Sun size={16} />
               <Switch checked={darkMode} onCheckedChange={setDarkMode} />
@@ -148,18 +153,18 @@ const Index = () => {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
           {SECTIONS.map(section => {
             const sectionGames = games.filter(game => game.section === section);
             const totalCategories = sectionGames.reduce((sum, game) => sum + game.categories.length, 0);
             
             return (
-              <Card key={section}>
+              <Card key={section} className="text-center">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm">{section}</CardTitle>
+                  <CardTitle className="text-xs sm:text-sm">{section}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{sectionGames.length}</div>
+                  <div className="text-xl sm:text-2xl font-bold">{sectionGames.length}</div>
                   <p className="text-xs text-muted-foreground">{totalCategories} categories</p>
                 </CardContent>
               </Card>
@@ -169,24 +174,27 @@ const Index = () => {
 
         {/* Tabs for sections */}
         <Tabs value={activeSection} onValueChange={(value) => setActiveSection(value as SectionType)}>
-          <TabsList className="grid w-full grid-cols-4 mb-6">
+          <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4 mb-6">
             {SECTIONS.map(section => (
-              <TabsTrigger key={section} value={section}>{section}</TabsTrigger>
+              <TabsTrigger key={section} value={section} className="text-xs sm:text-sm">
+                {section}
+              </TabsTrigger>
             ))}
           </TabsList>
 
           {SECTIONS.map(section => (
             <TabsContent key={section} value={section}>
-              <div className="space-y-6">
+              <div className="space-y-4 sm:space-y-6">
                 {/* Controls */}
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col gap-4">
                   <SearchAndSort
                     searchQuery={searchQuery}
                     onSearchChange={setSearchQuery}
                     sortBy={sortBy}
                     onSortChange={setSortBy}
+                    suggestions={gameSuggestions}
                   />
-                  <Button onClick={() => setShowGameForm(true)}>
+                  <Button onClick={() => setShowGameForm(true)} className="w-full sm:w-auto sm:self-end">
                     <Plus size={16} className="mr-2" />
                     Add Game
                   </Button>
@@ -195,7 +203,7 @@ const Index = () => {
                 {/* Games list */}
                 <div className="space-y-4">
                   {filteredAndSortedGames.length === 0 ? (
-                    <Card className="p-8 text-center">
+                    <Card className="p-6 sm:p-8 text-center">
                       <p className="text-muted-foreground mb-4">
                         {searchQuery ? 'No games match your search' : `No games in ${section} yet`}
                       </p>
