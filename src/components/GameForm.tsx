@@ -1,13 +1,15 @@
-
 import React, { useState } from 'react';
 import { Game, SectionType } from '@/types/speedrun';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Camera, X } from 'lucide-react';
-import { Camera as CapCamera } from '@capacitor/camera';
+import { X, Camera as CameraIcon, Upload } from 'lucide-react';
+import { CategoryForm } from './CategoryForm';
 
 interface GameFormProps {
   section: SectionType;
@@ -17,7 +19,7 @@ interface GameFormProps {
 
 export const GameForm: React.FC<GameFormProps> = ({ section, onSave, onCancel }) => {
   const [title, setTitle] = useState('');
-  const [image, setImage] = useState<string>('');
+  const [gameImage, setGameImage] = useState<string>('');
   const [tags, setTags] = useState<string[]>([]);
   const [newTag, setNewTag] = useState('');
 
@@ -32,20 +34,20 @@ export const GameForm: React.FC<GameFormProps> = ({ section, onSave, onCancel })
     setTags(tags.filter(tag => tag !== tagToRemove));
   };
 
-  const handleImageCapture = async () => {
+  const handleTakePhoto = async () => {
     try {
-      const result = await CapCamera.getPhoto({
-        quality: 80,
+      const image = await Camera.getPhoto({
+        quality: 90,
         allowEditing: true,
-        resultType: 'dataUrl',
-        source: 'photos'
+        resultType: CameraResultType.DataUrl,
+        source: CameraSource.Photos
       });
       
-      if (result.dataUrl) {
-        setImage(result.dataUrl);
+      if (image.dataUrl) {
+        setGameImage(image.dataUrl);
       }
     } catch (error) {
-      console.error('Error selecting image:', error);
+      console.error('Error taking photo:', error);
     }
   };
 
@@ -55,7 +57,7 @@ export const GameForm: React.FC<GameFormProps> = ({ section, onSave, onCancel })
 
     onSave({
       title: title.trim(),
-      image: image || undefined,
+      image: gameImage || undefined,
       section,
       categories: [],
       tags
@@ -84,14 +86,14 @@ export const GameForm: React.FC<GameFormProps> = ({ section, onSave, onCancel })
           <div>
             <Label>Game Image</Label>
             <div className="flex items-center space-x-4">
-              {image ? (
-                <img src={image} alt="Preview" className="w-20 h-20 rounded object-cover" />
+              {gameImage ? (
+                <img src={gameImage} alt="Preview" className="w-20 h-20 rounded object-cover" />
               ) : (
                 <div className="w-20 h-20 bg-muted rounded flex items-center justify-center">
-                  <Camera size={24} className="text-muted-foreground" />
+                  <CameraIcon size={24} className="text-muted-foreground" />
                 </div>
               )}
-              <Button type="button" variant="outline" onClick={handleImageCapture}>
+              <Button type="button" variant="outline" onClick={handleTakePhoto}>
                 Select Image
               </Button>
             </div>
