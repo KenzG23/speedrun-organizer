@@ -1,73 +1,110 @@
-# Welcome to your Lovable project
 
-## Project info
+# Speedrun Organizer
 
-**URL**: https://lovable.dev/projects/5a34891a-8167-4a7f-83f4-df1785aa9cc7
+A modern Android app for speedrunners to organize their runs by game and category, with images, notes, and reminders.
 
-## How can I edit this code?
+## Features
 
-There are several ways of editing your application.
+- **Four Main Sections**: ILs, Full Runs, MultiRuns, Troll Runs
+- **Game Management**: Add games with images, tags, and multiple categories
+- **Category Tracking**: Track PB times, placements, target times, and auto-calculate differences
+- **Smart Reminders**: Local notifications for run eligibility dates
+- **Search & Sort**: Powerful filtering and sorting options
+- **Dark Mode**: Toggle between light and dark themes
+- **Data Export**: JSON backup for your speedrun data
+- **Offline First**: All data stored locally with SQLite
 
-**Use Lovable**
+## Getting Started
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/5a34891a-8167-4a7f-83f4-df1785aa9cc7) and start prompting.
+### Mobile Development Setup
 
-Changes made via Lovable will be committed automatically to this repo.
+This app is built with Capacitor for native Android capabilities. To run on a physical device:
 
-**Use your preferred IDE**
+1. **Export to GitHub** via the "Export to Github" button
+2. **Clone your repository** and run `npm install`
+3. **Add Android platform**: `npx cap add android`
+4. **Update dependencies**: `npx cap update android`
+5. **Build the project**: `npm run build`
+6. **Sync with native**: `npx cap sync`
+7. **Run on device**: `npx cap run android`
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+*Note: You'll need Android Studio installed for Android development.*
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+### Customization Guide
 
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+#### Theme Colors
+Edit `src/index.css` to customize the color scheme:
+```css
+:root {
+  --primary: your-color-here;
+  --secondary: your-color-here;
+  /* Add more custom colors */
+}
 ```
 
-**Edit a file directly in GitHub**
+#### Default Profile Images
+Replace `/public/placeholder.svg` or modify the `defaultGameImage` setting in:
+```typescript
+// src/utils/storage.ts
+const defaultSettings = {
+  defaultGameImage: '/path/to/your/image.png'
+};
+```
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+#### Adding New Fields
+To add fields to categories, modify:
+1. `src/types/speedrun.ts` - Add to Category interface
+2. `src/components/CategoryForm.tsx` - Add form inputs
+3. `src/components/GameCard.tsx` - Display in cards
 
-**Use GitHub Codespaces**
+#### Notification Logic
+Customize notifications in `src/utils/notifications.ts`:
+```typescript
+// Change reminder timing (currently 1 day before)
+const reminderDate = new Date(eligibleDateTime.getTime() - 24 * 60 * 60 * 1000);
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+// Customize notification content
+title: "Your Custom Title",
+body: "Your custom message here"
+```
 
-## What technologies are used for this project?
+#### Database Schema
+The app uses localStorage for web/local development and will automatically use SQLite on mobile through Capacitor. Data structure is defined in `src/types/speedrun.ts`.
 
-This project is built with:
+## Project Structure
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+```
+src/
+├── components/          # React components
+│   ├── GameCard.tsx    # Expandable game display
+│   ├── GameForm.tsx    # Add/edit games
+│   ├── CategoryForm.tsx # Add/edit categories
+│   └── SearchAndSort.tsx # Search and sorting controls
+├── types/              # TypeScript interfaces
+├── utils/              # Utility functions
+│   ├── storage.ts      # Local data management
+│   ├── notifications.ts # Push notification handling
+│   └── timeCalculations.ts # Time math utilities
+└── pages/
+    └── Index.tsx       # Main app page
+```
 
-## How can I deploy this project?
+## Technologies Used
 
-Simply open [Lovable](https://lovable.dev/projects/5a34891a-8167-4a7f-83f4-df1785aa9cc7) and click on Share -> Publish.
+- **React** + **TypeScript** for the UI
+- **Capacitor** for native mobile capabilities
+- **Tailwind CSS** + **shadcn/ui** for styling
+- **Local Storage** (web) / **SQLite** (mobile) for data
+- **Local Notifications** for run reminders
+- **Camera API** for image selection
 
-## Can I connect a custom domain to my Lovable project?
+## Data Export/Import
 
-Yes, you can!
+The app supports JSON export for backup purposes. Exported data includes:
+- All games and categories
+- App settings and preferences
+- Export timestamp
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+Import functionality can be added by extending the `storage.importData()` method.
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+For questions or feature requests, check the app's notification settings and ensure proper permissions are granted for the best experience.
