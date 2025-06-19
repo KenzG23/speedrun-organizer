@@ -1,16 +1,16 @@
-
 import React, { useState, useEffect } from 'react';
-import { Game, SectionType } from '@/types/speedrun';
+import { Game, SectionType, AppSettings } from '@/types/speedrun';
 import { storage } from '@/utils/storage';
 import { GameCard } from '@/components/GameCard';
 import { GameForm } from '@/components/GameForm';
 import { SearchAndSort } from '@/components/SearchAndSort';
+import { ImportDialog } from '@/components/ImportDialog';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Plus, Download, Moon, Sun } from 'lucide-react';
+import { Plus, Download, Upload, Moon, Sun } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { requestNotificationPermissions } from '@/utils/notifications';
 
@@ -20,6 +20,7 @@ const Index = () => {
   const [games, setGames] = useState<Game[]>([]);
   const [activeSection, setActiveSection] = useState<SectionType>('ILs');
   const [showGameForm, setShowGameForm] = useState(false);
+  const [showImportDialog, setShowImportDialog] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('alphabetical');
   const [darkMode, setDarkMode] = useState(false);
@@ -105,6 +106,40 @@ const Index = () => {
     });
   };
 
+  const handleImportData = (data: { games: Game[]; settings?: AppSettings }, mode: 'merge' | 'replace') => {
+    try {
+      if (mode === 'replace') {
+        storage.saveGames(data.games);
+        setGames(data.games);
+      } else {
+        // Merge mode - avoid duplicates by checking IDs
+        const existingIds = new Set(games.map(g => g.id));
+        const newGames = data.games.filter(g => !existingIds.has(g.id));
+        const mergedGames = [...games, ...newGames];
+        storage.saveGames(mergedGames);
+        setGames(mergedGames);
+      }
+
+      if (data.settings) {
+        storage.saveSettings(data.settings);
+        setDarkMode(data.settings.darkMode);
+      }
+
+      toast({
+        title: "Import Successful",
+        description: mode === 'replace' 
+          ? `Replaced all data with ${data.games.length} games`
+          : `Added ${data.games.filter(g => !games.some(existing => existing.id === g.id)).length} new games`,
+      });
+    } catch (error) {
+      toast({
+        title: "Import Failed",
+        description: "Failed to import data. Please check the file format.",
+        variant: "destructive"
+      });
+    }
+  };
+
   // Generate suggestions for search
   const gameSuggestions = games
     .filter(game => game.section === activeSection)
@@ -139,12 +174,16 @@ const Index = () => {
             </h1>
             <p className="text-muted-foreground mt-1 text-sm">Track your personal bests and plan your next runs</p>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4">
             <div className="flex items-center space-x-2">
               <Sun size={16} />
               <Switch checked={darkMode} onCheckedChange={setDarkMode} />
               <Moon size={16} />
             </div>
+            <Button variant="outline" size="sm" onClick={() => setShowImportDialog(true)}>
+              <Upload size={16} className="mr-2" />
+              Import
+            </Button>
             <Button variant="outline" size="sm" onClick={handleExportData}>
               <Download size={16} className="mr-2" />
               Export
@@ -238,6 +277,13 @@ const Index = () => {
             onCancel={() => setShowGameForm(false)}
           />
         )}
+
+        {/* Import Dialog */}
+        <ImportDialog
+          isOpen={showImportDialog}
+          onClose={() => setShowImportDialog(false)}
+          onImport={handleImportData}
+        />
       </div>
     </div>
   );

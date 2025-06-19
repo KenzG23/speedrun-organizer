@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Category } from '@/types/speedrun';
 import { Button } from '@/components/ui/button';
@@ -15,7 +14,7 @@ interface CategoryFormProps {
 }
 
 const categoryOptions = ['Any%', '100%', 'Glitchless', 'Cheat%', 'Other'];
-const placementOptions = Array.from({ length: 20 }, (_, i) => i + 1);
+const placementOptions = Array.from({ length: 150 }, (_, i) => i + 1);
 
 const getOrdinalSuffix = (num: number): string => {
   const j = num % 10;
@@ -49,6 +48,7 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
     videoLink: '',
     notes: ''
   });
+  const [placementInput, setPlacementInput] = useState('1');
 
   useEffect(() => {
     if (category) {
@@ -85,6 +85,24 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
       }));
     }
   }, [formData.pbTime, formData.timeToBeat, formData.placement]);
+
+  const handlePlacementChange = (value: string) => {
+    const numValue = parseInt(value);
+    if (!isNaN(numValue) && numValue >= 1 && numValue <= 150) {
+      setPlacementInput(value);
+      setFormData({ ...formData, placement: numValue });
+    }
+  };
+
+  const handlePlacementInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setPlacementInput(value);
+    
+    const numValue = parseInt(value);
+    if (!isNaN(numValue) && numValue >= 1 && numValue <= 150) {
+      setFormData({ ...formData, placement: numValue });
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -127,19 +145,30 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
           </div>
           
           <div>
-            <Label htmlFor="placement">Placement</Label>
-            <Select value={String(formData.placement)} onValueChange={value => setFormData({ ...formData, placement: parseInt(value) })}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select placement" />
-              </SelectTrigger>
-              <SelectContent>
-                {placementOptions.map(option => (
-                  <SelectItem key={option} value={String(option)}>
-                    {option}{getOrdinalSuffix(option)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label htmlFor="placement">Placement (1-150)</Label>
+            <div className="flex gap-2">
+              <Input
+                type="number"
+                min="1"
+                max="150"
+                value={placementInput}
+                onChange={handlePlacementInputChange}
+                className="flex-1"
+                placeholder="Type placement..."
+              />
+              <Select value={String(formData.placement)} onValueChange={handlePlacementChange}>
+                <SelectTrigger className="w-32">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="max-h-48">
+                  {placementOptions.slice(0, 20).map(option => (
+                    <SelectItem key={option} value={String(option)}>
+                      {option}{getOrdinalSuffix(option)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           
           <div>
