@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Play, Pause, Square, Save } from 'lucide-react';
@@ -9,7 +9,7 @@ interface TimerProps {
   onSaveTime: (time: string) => void;
 }
 
-export const Timer: React.FC<TimerProps> = ({ onSaveTime }) => {
+export const Timer = ({ onSaveTime }: TimerProps) => {
   const [timer, setTimer] = useState<TimerState>({
     isRunning: false,
     startTime: 0,
