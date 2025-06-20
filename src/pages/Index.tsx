@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Game, SectionType, AppSettings } from '@/types/speedrun';
 import { storage } from '@/utils/storage';
@@ -14,6 +13,8 @@ import { Label } from '@/components/ui/label';
 import { Plus, Download, Upload, Moon, Sun, Trophy, Zap, Users, Laugh } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { requestNotificationPermissions } from '@/utils/notifications';
+import { Stats } from '@/components/Stats';
+import { CloudSync } from '@/components/CloudSync';
 
 const SECTIONS: SectionType[] = ['ILs', 'Full Runs', 'MultiRuns', 'Troll Runs'];
 
@@ -37,6 +38,7 @@ const Index = () => {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
+  const [activeTab, setActiveTab] = useState<'games' | 'stats' | 'sync'>('games');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -230,98 +232,120 @@ const Index = () => {
           </div>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
-          {SECTIONS.map(section => {
-            const sectionGames = games.filter(game => game.section === section);
-            const totalCategories = sectionGames.reduce((sum, game) => sum + game.categories.length, 0);
-            const IconComponent = getSectionIcon(section);
-            
-            return (
-              <Card key={section} className="text-center hover-scale transition-all">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-xs sm:text-sm flex items-center justify-center gap-1">
-                    <IconComponent size={16} />
-                    {section}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-xl sm:text-2xl font-bold">{sectionGames.length}</div>
-                  <p className="text-xs text-muted-foreground">{totalCategories} categories</p>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-
-        {/* Tabs for sections */}
-        <Tabs value={activeSection} onValueChange={(value) => setActiveSection(value as SectionType)}>
-          <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4 mb-6">
-            {SECTIONS.map(section => {
-              const IconComponent = getSectionIcon(section);
-              return (
-                <TabsTrigger key={section} value={section} className="text-xs sm:text-sm flex items-center gap-1">
-                  <IconComponent size={14} />
-                  {section}
-                </TabsTrigger>
-              );
-            })}
+        {/* Main Navigation Tabs */}
+        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'games' | 'stats' | 'sync')} className="mb-6">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="games">🎮 Games</TabsTrigger>
+            <TabsTrigger value="stats">📊 Stats</TabsTrigger>
+            <TabsTrigger value="sync">☁️ Sync</TabsTrigger>
           </TabsList>
 
-          {SECTIONS.map(section => (
-            <TabsContent key={section} value={section}>
-              <div className="space-y-4 sm:space-y-6">
-                {/* Advanced Search and Controls */}
-                <div className="space-y-4">
-                  <AdvancedSearch
-                    games={games}
-                    searchQuery={searchQuery}
-                    onSearchChange={setSearchQuery}
-                    sortBy={sortBy}
-                    onSortChange={setSortBy}
-                    selectedTags={selectedTags}
-                    onTagsChange={setSelectedTags}
-                    showFavoritesOnly={showFavoritesOnly}
-                    onFavoritesToggle={setShowFavoritesOnly}
-                  />
-                  <Button onClick={() => setShowGameForm(true)} className="w-full sm:w-auto sm:self-end">
-                    <Plus size={16} className="mr-2" />
-                    Add Game
-                  </Button>
-                </div>
+          <TabsContent value="games">
+            {/* Stats Cards */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
+              {SECTIONS.map(section => {
+                const sectionGames = games.filter(game => game.section === section);
+                const totalCategories = sectionGames.reduce((sum, game) => sum + game.categories.length, 0);
+                const IconComponent = getSectionIcon(section);
+                
+                return (
+                  <Card key={section} className="text-center hover-scale transition-all">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-xs sm:text-sm flex items-center justify-center gap-1">
+                        <IconComponent size={16} />
+                        {section}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-xl sm:text-2xl font-bold">{sectionGames.length}</div>
+                      <p className="text-xs text-muted-foreground">{totalCategories} categories</p>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
 
-                {/* Games list */}
-                <div className="space-y-4">
-                  {filteredAndSortedGames.length === 0 ? (
-                    <Card className="p-6 sm:p-8 text-center">
-                      <p className="text-muted-foreground mb-4">
-                        {searchQuery || selectedTags.length > 0 || showFavoritesOnly 
-                          ? 'No games match your filters' 
-                          : `No games in ${section} yet`}
-                      </p>
-                      {!searchQuery && selectedTags.length === 0 && !showFavoritesOnly && (
-                        <Button onClick={() => setShowGameForm(true)}>
-                          <Plus size={16} className="mr-2" />
-                          Add Your First Game
-                        </Button>
-                      )}
-                    </Card>
-                  ) : (
-                    <div className="animate-fade-in">
-                      {filteredAndSortedGames.map(game => (
-                        <GameCard
-                          key={game.id}
-                          game={game}
-                          onUpdateGame={handleUpdateGame}
-                          onDeleteGame={handleDeleteGame}
-                        />
-                      ))}
+            {/* Tabs for sections */}
+            <Tabs value={activeSection} onValueChange={(value) => setActiveSection(value as SectionType)}>
+              <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4 mb-6">
+                {SECTIONS.map(section => {
+                  const IconComponent = getSectionIcon(section);
+                  return (
+                    <TabsTrigger key={section} value={section} className="text-xs sm:text-sm flex items-center gap-1">
+                      <IconComponent size={14} />
+                      {section}
+                    </TabsTrigger>
+                  );
+                })}
+              </TabsList>
+
+              {SECTIONS.map(section => (
+                <TabsContent key={section} value={section}>
+                  <div className="space-y-4 sm:space-y-6">
+                    {/* Advanced Search and Controls */}
+                    <div className="space-y-4">
+                      <AdvancedSearch
+                        games={games}
+                        searchQuery={searchQuery}
+                        onSearchChange={setSearchQuery}
+                        sortBy={sortBy}
+                        onSortChange={setSortBy}
+                        selectedTags={selectedTags}
+                        onTagsChange={setSelectedTags}
+                        showFavoritesOnly={showFavoritesOnly}
+                        onFavoritesToggle={setShowFavoritesOnly}
+                      />
+                      <Button onClick={() => setShowGameForm(true)} className="w-full sm:w-auto sm:self-end">
+                        <Plus size={16} className="mr-2" />
+                        Add Game
+                      </Button>
                     </div>
-                  )}
-                </div>
-              </div>
-            </TabsContent>
-          ))}
+
+                    {/* Games list */}
+                    <div className="space-y-4">
+                      {filteredAndSortedGames.length === 0 ? (
+                        <Card className="p-6 sm:p-8 text-center">
+                          <p className="text-muted-foreground mb-4">
+                            {searchQuery || selectedTags.length > 0 || showFavoritesOnly 
+                              ? 'No games match your filters' 
+                              : `No games in ${section} yet`}
+                          </p>
+                          {!searchQuery && selectedTags.length === 0 && !showFavoritesOnly && (
+                            <Button onClick={() => setShowGameForm(true)}>
+                              <Plus size={16} className="mr-2" />
+                              Add Your First Game
+                            </Button>
+                          )}
+                        </Card>
+                      ) : (
+                        <div className="animate-fade-in">
+                          {filteredAndSortedGames.map(game => (
+                            <GameCard
+                              key={game.id}
+                              game={game}
+                              onUpdateGame={handleUpdateGame}
+                              onDeleteGame={handleDeleteGame}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </TabsContent>
+              ))}
+            </Tabs>
+          </TabsContent>
+
+          <TabsContent value="stats">
+            <Stats games={games} />
+          </TabsContent>
+
+          <TabsContent value="sync">
+            <CloudSync 
+              onExport={handleExportData}
+              onImport={handleImportData}
+            />
+          </TabsContent>
         </Tabs>
 
         {/* Game Form Modal */}
