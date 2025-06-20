@@ -5,10 +5,9 @@ const SCOPES = 'https://www.googleapis.com/auth/drive.file';
 
 // These would normally come from Google Cloud Console
 // For now, using placeholder values - user needs to set these up
-const CLIENT_ID = process.env.VITE_GOOGLE_CLIENT_ID || 'your-google-client-id';
-const API_KEY = process.env.VITE_GOOGLE_API_KEY || 'your-google-api-key';
+const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || 'your-google-client-id';
+const API_KEY = import.meta.env.VITE_GOOGLE_API_KEY || 'your-google-api-key';
 
-let gapi: any;
 let tokenClient: any;
 
 export const initializeGoogleDrive = async () => {
@@ -101,7 +100,7 @@ export const uploadToGoogleDrive = async (data: any, fileName: string) => {
     const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
       method: 'POST',
       headers: new Headers({
-        Authorization: `Bearer ${window.gapi.client.getToken().access_token}`,
+        Authorization: `Bearer ${window.gapi.client.getToken()?.access_token}`,
       }),
       body: form,
     });
