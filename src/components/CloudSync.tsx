@@ -1,11 +1,21 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Cloud, Download, Upload, RefreshCw, CheckCircle, AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Cloud, Download, Upload, RefreshCw, CheckCircle, AlertCircle, Info } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { 
+  initializeGoogleDrive, 
+  signInToGoogleDrive, 
+  signOutFromGoogleDrive, 
+  uploadToGoogleDrive,
+  listGoogleDriveFiles,
+  downloadFromGoogleDrive,
+  isGoogleDriveConnected 
+} from '@/utils/googleDrive';
 
 interface CloudSyncProps {
   onExport: () => void;
@@ -17,44 +27,124 @@ export const CloudSync = ({ onExport, onImport }: CloudSyncProps) => {
   const [autoSync, setAutoSync] = useState(false);
   const [lastSync, setLastSync] = useState<Date | null>(null);
   const [syncing, setSyncing] = useState(false);
+  const [initializing, setInitializing] = useState(false);
+  const [backupFiles, setBackupFiles] = useState<any[]>([]);
   const { toast } = useToast();
 
-  const handleConnectDrive = () => {
-    // Simulate Google Drive connection
-    toast({
-      title: "Google Drive Integration",
-      description: "Google Drive integration would require OAuth setup. For now, use manual export/import.",
-    });
-    
-    // In a real implementation, this would use Google Drive API
-    setIsConnected(true);
-    setLastSync(new Date());
+  useEffect(() => {
+    // Check if already connected on component mount
+    setIsConnected(isGoogleDriveConnected());
+  }, []);
+
+  const handleInitializeAndConnect = async () => {
+    setInitializing(true);
+    try {
+      await initializeGoogleDrive();
+      await signInToGoogleDrive();
+      setIsConnected(true);
+      setLastSync(new Date());
+      
+      // Load existing backup files
+      const files = await listGoogleDriveFiles("name contains 'speedrun-backup'");
+      setBackupFiles(files || []);
+      
+      toast({
+        title: "Connected to Google Drive",
+        description: "Successfully connected and authenticated with Google Drive.",
+      });
+    } catch (error) {
+      console.error('Google Drive connection error:', error);
+      toast({
+        title: "Connection Failed",
+        description: "Failed to connect to Google Drive. Please check your configuration and try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setInitializing(false);
+    }
   };
 
-  const handleManualSync = async () => {
-    setSyncing(true);
+  const handleDisconnect = () => {
+    signOutFromGoogleDrive();
+    setIsConnected(false);
+    setBackupFiles([]);
+    toast({
+      title: "Disconnected",
+      description: "Successfully disconnected from Google Drive.",
+    });
+  };
+
+  const handleBackupToDrive = async () => {
+    if (!isConnected) return;
     
-    // Simulate sync process
-    setTimeout(() => {
-      setSyncing(false);
+    setSyncing(true);
+    try {
+      // Get current data for backup
+      const data = {
+        games: JSON.parse(localStorage.getItem('speedrun-games') || '[]'),
+        settings: JSON.parse(localStorage.getItem('speedrun-settings') || '{}'),
+        exportDate: new Date().toISOString(),
+        version: '1.0'
+      };
+
+      const fileName = `speedrun-backup-${new Date().toISOString().split('T')[0]}.json`;
+      await uploadToGoogleDrive(data, fileName);
+      
+      // Refresh file list
+      const files = await listGoogleDriveFiles("name contains 'speedrun-backup'");
+      setBackupFiles(files || []);
+      
       setLastSync(new Date());
       toast({
-        title: "Sync Complete",
-        description: "Your data has been backed up successfully.",
+        title: "Backup Complete",
+        description: "Your speedrun data has been successfully backed up to Google Drive.",
       });
-    }, 2000);
+    } catch (error) {
+      console.error('Backup error:', error);
+      toast({
+        title: "Backup Failed",
+        description: "Failed to backup data to Google Drive. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setSyncing(false);
+    }
   };
 
-  const handleDownloadFromCloud = () => {
-    toast({
-      title: "Download from Cloud",
-      description: "This would download your latest backup from Google Drive.",
-    });
+  const handleRestoreFromDrive = async (fileId: string, fileName: string) => {
+    try {
+      const data = await downloadFromGoogleDrive(fileId);
+      onImport(data, 'replace');
+      toast({
+        title: "Restore Complete",
+        description: `Successfully restored data from ${fileName}`,
+      });
+    } catch (error) {
+      console.error('Restore error:', error);
+      toast({
+        title: "Restore Failed",
+        description: "Failed to restore data from Google Drive. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-bold">☁️ Cloud Backup</h2>
+      
+      {/* Setup Instructions */}
+      <Alert>
+        <Info className="h-4 w-4" />
+        <AlertDescription>
+          <strong>Setup Required:</strong> To use Google Drive integration, you need to:
+          <br />1. Create a project in Google Cloud Console
+          <br />2. Enable the Google Drive API
+          <br />3. Set up OAuth 2.0 credentials
+          <br />4. Add your domain to authorized origins
+          <br />5. Set VITE_GOOGLE_CLIENT_ID and VITE_GOOGLE_API_KEY environment variables
+        </AlertDescription>
+      </Alert>
       
       {/* Connection Status */}
       <Card>
@@ -74,9 +164,16 @@ export const CloudSync = ({ onExport, onImport }: CloudSyncProps) => {
               )}
               <span>{isConnected ? 'Connected to Google Drive' : 'Not connected'}</span>
             </div>
-            {!isConnected && (
-              <Button onClick={handleConnectDrive}>
-                Connect Drive
+            {!isConnected ? (
+              <Button 
+                onClick={handleInitializeAndConnect}
+                disabled={initializing}
+              >
+                {initializing ? 'Connecting...' : 'Connect Drive'}
+              </Button>
+            ) : (
+              <Button variant="outline" onClick={handleDisconnect}>
+                Disconnect
               </Button>
             )}
           </div>
@@ -166,36 +263,49 @@ export const CloudSync = ({ onExport, onImport }: CloudSyncProps) => {
           {isConnected && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t">
               <Button
-                onClick={handleManualSync}
+                onClick={handleBackupToDrive}
                 disabled={syncing}
                 className="flex items-center gap-2"
               >
                 <RefreshCw size={16} className={syncing ? "animate-spin" : ""} />
-                {syncing ? 'Syncing...' : 'Backup to Drive'}
-              </Button>
-              
-              <Button
-                variant="outline"
-                onClick={handleDownloadFromCloud}
-                className="flex items-center gap-2"
-              >
-                <Download size={16} />
-                Restore from Drive
+                {syncing ? 'Backing up...' : 'Backup to Drive'}
               </Button>
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Info Card */}
-      <Card className="bg-muted/30">
-        <CardContent className="pt-6">
-          <div className="text-sm text-muted-foreground space-y-2">
-            <p><strong>Note:</strong> Full Google Drive integration requires OAuth setup and API credentials.</p>
-            <p>For now, you can use the export/import functionality to manually backup your data to any cloud service.</p>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Google Drive Files */}
+      {isConnected && backupFiles.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Available Backups</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {backupFiles.map((file) => (
+                <div key={file.id} className="flex items-center justify-between p-2 border rounded">
+                  <div>
+                    <div className="font-medium">{file.name}</div>
+                    <div className="text-sm text-muted-foreground">
+                      Modified: {new Date(file.modifiedTime).toLocaleString()}
+                    </div>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleRestoreFromDrive(file.id, file.name)}
+                    className="flex items-center gap-2"
+                  >
+                    <Download size={14} />
+                    Restore
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };
