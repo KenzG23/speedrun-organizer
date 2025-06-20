@@ -8,6 +8,7 @@ export interface Game {
   tags: string[];
   createdAt: string;
   updatedAt: string;
+  isFavorite?: boolean;
 }
 
 export interface Category {
@@ -23,6 +24,9 @@ export interface Category {
   nextRunEligible?: string;
   videoLink?: string;
   notes?: string;
+  variables?: string;
+  previousTimes?: string[];
+  isFavorite?: boolean;
 }
 
 export type SectionType = 'ILs' | 'Full Runs' | 'MultiRuns' | 'Troll Runs';
@@ -30,4 +34,12 @@ export type SectionType = 'ILs' | 'Full Runs' | 'MultiRuns' | 'Troll Runs';
 export interface AppSettings {
   darkMode: boolean;
   defaultGameImage: string;
+  tagPresets: string[];
+  notificationsEnabled: boolean;
+}
+
+export interface TimerState {
+  isRunning: boolean;
+  startTime: number;
+  elapsedTime: number;
 }

@@ -1,20 +1,31 @@
+
 import React, { useState, useEffect } from 'react';
 import { Game, SectionType, AppSettings } from '@/types/speedrun';
 import { storage } from '@/utils/storage';
 import { GameCard } from '@/components/GameCard';
 import { GameForm } from '@/components/GameForm';
-import { SearchAndSort } from '@/components/SearchAndSort';
+import { AdvancedSearch } from '@/components/AdvancedSearch';
 import { ImportDialog } from '@/components/ImportDialog';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Plus, Download, Upload, Moon, Sun } from 'lucide-react';
+import { Plus, Download, Upload, Moon, Sun, Trophy, Zap, Users, Laugh } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { requestNotificationPermissions } from '@/utils/notifications';
 
 const SECTIONS: SectionType[] = ['ILs', 'Full Runs', 'MultiRuns', 'Troll Runs'];
+
+const getSectionIcon = (section: SectionType) => {
+  switch (section) {
+    case 'ILs': return Zap;
+    case 'Full Runs': return Trophy;
+    case 'MultiRuns': return Users;
+    case 'Troll Runs': return Laugh;
+    default: return Trophy;
+  }
+};
 
 const Index = () => {
   const [games, setGames] = useState<Game[]>([]);
@@ -23,6 +34,8 @@ const Index = () => {
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('alphabetical');
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
   const { toast } = useToast();
 
@@ -146,10 +159,29 @@ const Index = () => {
     .map(game => game.title);
 
   const filteredAndSortedGames = games
-    .filter(game => 
-      game.section === activeSection &&
-      (searchQuery === '' || game.title.toLowerCase().includes(searchQuery.toLowerCase()))
-    )
+    .filter(game => {
+      // Section filter
+      if (game.section !== activeSection) return false;
+      
+      // Favorites filter
+      if (showFavoritesOnly && !game.isFavorite) return false;
+      
+      // Tag filter
+      if (selectedTags.length > 0 && !selectedTags.some(tag => game.tags.includes(tag))) return false;
+      
+      // Search filter
+      if (searchQuery === '') return true;
+      
+      const query = searchQuery.toLowerCase();
+      return (
+        game.title.toLowerCase().includes(query) ||
+        game.tags.some(tag => tag.toLowerCase().includes(query)) ||
+        game.categories.some(category => 
+          category.name.toLowerCase().includes(query) ||
+          (category.variables && category.variables.toLowerCase().includes(query))
+        )
+      );
+    })
     .sort((a, b) => {
       switch (sortBy) {
         case 'alphabetical':
@@ -158,6 +190,13 @@ const Index = () => {
           return b.categories.length - a.categories.length;
         case 'recent':
           return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+        case 'placement':
+          const aBestPlacement = Math.min(...a.categories.map(c => c.placement), Infinity);
+          const bBestPlacement = Math.min(...b.categories.map(c => c.placement), Infinity);
+          return aBestPlacement - bBestPlacement;
+        case 'pbTime':
+          // This is a simplified sort - could be enhanced with proper time parsing
+          return a.categories[0]?.pbTime.localeCompare(b.categories[0]?.pbTime || '') || 0;
         default:
           return 0;
       }
@@ -196,11 +235,15 @@ const Index = () => {
           {SECTIONS.map(section => {
             const sectionGames = games.filter(game => game.section === section);
             const totalCategories = sectionGames.reduce((sum, game) => sum + game.categories.length, 0);
+            const IconComponent = getSectionIcon(section);
             
             return (
-              <Card key={section} className="text-center">
+              <Card key={section} className="text-center hover-scale transition-all">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-xs sm:text-sm">{section}</CardTitle>
+                  <CardTitle className="text-xs sm:text-sm flex items-center justify-center gap-1">
+                    <IconComponent size={16} />
+                    {section}
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="text-xl sm:text-2xl font-bold">{sectionGames.length}</div>
@@ -214,24 +257,32 @@ const Index = () => {
         {/* Tabs for sections */}
         <Tabs value={activeSection} onValueChange={(value) => setActiveSection(value as SectionType)}>
           <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4 mb-6">
-            {SECTIONS.map(section => (
-              <TabsTrigger key={section} value={section} className="text-xs sm:text-sm">
-                {section}
-              </TabsTrigger>
-            ))}
+            {SECTIONS.map(section => {
+              const IconComponent = getSectionIcon(section);
+              return (
+                <TabsTrigger key={section} value={section} className="text-xs sm:text-sm flex items-center gap-1">
+                  <IconComponent size={14} />
+                  {section}
+                </TabsTrigger>
+              );
+            })}
           </TabsList>
 
           {SECTIONS.map(section => (
             <TabsContent key={section} value={section}>
               <div className="space-y-4 sm:space-y-6">
-                {/* Controls */}
-                <div className="flex flex-col gap-4">
-                  <SearchAndSort
+                {/* Advanced Search and Controls */}
+                <div className="space-y-4">
+                  <AdvancedSearch
+                    games={games}
                     searchQuery={searchQuery}
                     onSearchChange={setSearchQuery}
                     sortBy={sortBy}
                     onSortChange={setSortBy}
-                    suggestions={gameSuggestions}
+                    selectedTags={selectedTags}
+                    onTagsChange={setSelectedTags}
+                    showFavoritesOnly={showFavoritesOnly}
+                    onFavoritesToggle={setShowFavoritesOnly}
                   />
                   <Button onClick={() => setShowGameForm(true)} className="w-full sm:w-auto sm:self-end">
                     <Plus size={16} className="mr-2" />
@@ -244,9 +295,11 @@ const Index = () => {
                   {filteredAndSortedGames.length === 0 ? (
                     <Card className="p-6 sm:p-8 text-center">
                       <p className="text-muted-foreground mb-4">
-                        {searchQuery ? 'No games match your search' : `No games in ${section} yet`}
+                        {searchQuery || selectedTags.length > 0 || showFavoritesOnly 
+                          ? 'No games match your filters' 
+                          : `No games in ${section} yet`}
                       </p>
-                      {!searchQuery && (
+                      {!searchQuery && selectedTags.length === 0 && !showFavoritesOnly && (
                         <Button onClick={() => setShowGameForm(true)}>
                           <Plus size={16} className="mr-2" />
                           Add Your First Game
@@ -254,14 +307,16 @@ const Index = () => {
                       )}
                     </Card>
                   ) : (
-                    filteredAndSortedGames.map(game => (
-                      <GameCard
-                        key={game.id}
-                        game={game}
-                        onUpdateGame={handleUpdateGame}
-                        onDeleteGame={handleDeleteGame}
-                      />
-                    ))
+                    <div className="animate-fade-in">
+                      {filteredAndSortedGames.map(game => (
+                        <GameCard
+                          key={game.id}
+                          game={game}
+                          onUpdateGame={handleUpdateGame}
+                          onDeleteGame={handleDeleteGame}
+                        />
+                      ))}
+                    </div>
                   )}
                 </div>
               </div>

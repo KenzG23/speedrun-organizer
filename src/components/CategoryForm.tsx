@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { Timer } from './Timer';
 import { calculateTimeDifference } from '@/utils/timeCalculations';
 
 interface CategoryFormProps {
@@ -46,9 +47,13 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
     timeDifference: '',
     nextRunEligible: '',
     videoLink: '',
-    notes: ''
+    notes: '',
+    variables: '',
+    previousTimes: [] as string[],
+    isFavorite: false
   });
   const [placementInput, setPlacementInput] = useState('1');
+  const [showTimer, setShowTimer] = useState(false);
 
   useEffect(() => {
     if (category) {
@@ -63,7 +68,10 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
         timeDifference: category.timeDifference,
         nextRunEligible: category.nextRunEligible || '',
         videoLink: category.videoLink || '',
-        notes: category.notes || ''
+        notes: category.notes || '',
+        variables: category.variables || '',
+        previousTimes: category.previousTimes || [],
+        isFavorite: category.isFavorite || false
       });
     }
   }, [category]);
@@ -104,6 +112,25 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
     }
   };
 
+  const handleTimerSave = (time: string) => {
+    const currentPB = formData.pbTime;
+    if (currentPB) {
+      setFormData(prevData => ({
+        ...prevData,
+        previousTimes: [...prevData.previousTimes, currentPB],
+        pbTime: time,
+        dateOfRun: new Date().toISOString().split('T')[0]
+      }));
+    } else {
+      setFormData(prevData => ({
+        ...prevData,
+        pbTime: time,
+        dateOfRun: new Date().toISOString().split('T')[0]
+      }));
+    }
+    setShowTimer(false);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name.trim()) return;
@@ -119,7 +146,10 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
       timeDifference: formData.timeDifference,
       nextRunEligible: formData.nextRunEligible,
       videoLink: formData.videoLink,
-      notes: formData.notes
+      notes: formData.notes,
+      variables: formData.variables,
+      previousTimes: formData.previousTimes,
+      isFavorite: formData.isFavorite
     });
   };
 
@@ -173,14 +203,43 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
           
           <div>
             <Label htmlFor="pbTime">Personal Best Time</Label>
+            <div className="flex gap-2">
+              <Input
+                id="pbTime"
+                type="text"
+                placeholder="00:00:00"
+                value={formData.pbTime}
+                onChange={e => setFormData({ ...formData, pbTime: e.target.value })}
+                required
+                className="flex-1"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setShowTimer(!showTimer)}
+              >
+                Timer
+              </Button>
+            </div>
+          </div>
+          
+          {showTimer && (
+            <Timer onSaveTime={handleTimerSave} />
+          )}
+          
+          <div>
+            <Label htmlFor="variables">Variables</Label>
             <Input
-              id="pbTime"
+              id="variables"
               type="text"
-              placeholder="00:00:00"
-              value={formData.pbTime}
-              onChange={e => setFormData({ ...formData, pbTime: e.target.value })}
-              required
+              placeholder="e.g., Hard, NG+, PC, Glitched"
+              value={formData.variables}
+              onChange={e => setFormData({ ...formData, variables: e.target.value })}
             />
+            <p className="text-xs text-muted-foreground mt-1">
+              Add any custom variables or modifiers for this run
+            </p>
           </div>
           
           <div>
