@@ -1,11 +1,10 @@
-
 import React, { useState } from 'react';
 import { Game, Category } from '@/types/speedrun';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { ChevronDown, ChevronUp, Edit, Plus, Trash2, ExternalLink, Star, Copy, Timer } from 'lucide-react';
+import { ChevronDown, ChevronUp, Edit, Plus, Trash2, ExternalLink, Star, Copy, Timer, GripVertical } from 'lucide-react';
 import { CategoryForm } from './CategoryForm';
 import { GameForm } from './GameForm';
 
@@ -17,9 +16,11 @@ interface GameCardProps {
 
 export const GameCard: React.FC<GameCardProps> = ({ game, onUpdateGame, onDeleteGame }) => {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [showAllTags, setShowAllTags] = useState(false);
   const [showCategoryForm, setShowCategoryForm] = useState(false);
   const [showGameForm, setShowGameForm] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [draggedCategory, setDraggedCategory] = useState<string | null>(null);
 
   const handleAddCategory = (category: Omit<Category, 'id'>) => {
     const newCategory: Category = {
@@ -61,6 +62,38 @@ export const GameCard: React.FC<GameCardProps> = ({ game, onUpdateGame, onDelete
     });
   };
 
+  const handleCategoryDragStart = (e: React.DragEvent, categoryId: string) => {
+    setDraggedCategory(categoryId);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleCategoryDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleCategoryDrop = (e: React.DragEvent, targetCategoryId: string) => {
+    e.preventDefault();
+    
+    if (!draggedCategory || draggedCategory === targetCategoryId) {
+      setDraggedCategory(null);
+      return;
+    }
+
+    const draggedIndex = game.categories.findIndex(cat => cat.id === draggedCategory);
+    const targetIndex = game.categories.findIndex(cat => cat.id === targetCategoryId);
+
+    if (draggedIndex !== -1 && targetIndex !== -1) {
+      const newCategories = [...game.categories];
+      const [draggedItem] = newCategories.splice(draggedIndex, 1);
+      newCategories.splice(targetIndex, 0, draggedItem);
+      
+      onUpdateGame(game.id, { categories: newCategories });
+    }
+    
+    setDraggedCategory(null);
+  };
+
   const handleUpdateGame = (gameData: Omit<Game, 'id' | 'createdAt' | 'updatedAt'>) => {
     onUpdateGame(game.id, gameData);
     setShowGameForm(false);
@@ -92,6 +125,9 @@ export const GameCard: React.FC<GameCardProps> = ({ game, onUpdateGame, onDelete
     return 0;
   };
 
+  const visibleTags = showAllTags ? game.tags : game.tags.slice(0, 2);
+  const remainingTagsCount = game.tags.length - 2;
+
   return (
     <>
       <Card className="w-full mb-4 transition-all duration-200 hover:shadow-lg animate-fade-in">
@@ -109,11 +145,31 @@ export const GameCard: React.FC<GameCardProps> = ({ game, onUpdateGame, onDelete
                   {game.isFavorite && <Star size={16} className="fill-yellow-400 text-yellow-400" />}
                 </CardTitle>
                 <div className="flex flex-wrap gap-1 mt-1">
-                  {game.tags.map(tag => (
+                  {visibleTags.map(tag => (
                     <Badge key={tag} variant="secondary" className="text-xs">
                       {tag}
                     </Badge>
                   ))}
+                  {!showAllTags && remainingTagsCount > 0 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-5 px-1 text-xs"
+                      onClick={() => setShowAllTags(true)}
+                    >
+                      (+{remainingTagsCount})
+                    </Button>
+                  )}
+                  {showAllTags && game.tags.length > 2 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-5 px-1 text-xs"
+                      onClick={() => setShowAllTags(false)}
+                    >
+                      Show less
+                    </Button>
+                  )}
                 </div>
               </div>
             </div>
@@ -160,9 +216,19 @@ export const GameCard: React.FC<GameCardProps> = ({ game, onUpdateGame, onDelete
         {isExpanded && (
           <CardContent className="pt-0 space-y-3 animate-accordion-down">
             {game.categories.map(category => (
-              <div key={category.id} className="p-3 border rounded-lg bg-muted/30">
+              <div 
+                key={category.id} 
+                className={`p-3 border rounded-lg bg-muted/30 transition-all ${
+                  draggedCategory === category.id ? 'opacity-50' : ''
+                }`}
+                draggable
+                onDragStart={(e) => handleCategoryDragStart(e, category.id)}
+                onDragOver={handleCategoryDragOver}
+                onDrop={(e) => handleCategoryDrop(e, category.id)}
+              >
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
+                    <GripVertical size={12} className="text-muted-foreground cursor-grab" />
                     <h4 className="font-medium text-sm">{category.name}</h4>
                     {category.isFavorite && <Star size={12} className="fill-yellow-400 text-yellow-400" />}
                   </div>

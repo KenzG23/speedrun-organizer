@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Plus, Download, Upload, Moon, Sun, Trophy, Zap, Users, Laugh } from 'lucide-react';
+import { Plus, Download, Upload, Moon, Sun, Trophy, Zap, Users, Laugh, GripVertical } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { requestNotificationPermissions } from '@/utils/notifications';
 import { Stats } from '@/components/Stats';
@@ -39,6 +39,7 @@ const Index = () => {
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
   const [activeTab, setActiveTab] = useState<'games' | 'stats' | 'sync'>('games');
+  const [draggedGame, setDraggedGame] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -101,6 +102,45 @@ const Index = () => {
       title: "Game Deleted",
       description: "Game has been removed from your collection",
     });
+  };
+
+  const handleGameDragStart = (e: React.DragEvent, gameId: string) => {
+    setDraggedGame(gameId);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleGameDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleGameDrop = (e: React.DragEvent, targetGameId: string) => {
+    e.preventDefault();
+    
+    if (!draggedGame || draggedGame === targetGameId) {
+      setDraggedGame(null);
+      return;
+    }
+
+    const sectionGames = filteredAndSortedGames;
+    const draggedIndex = sectionGames.findIndex(game => game.id === draggedGame);
+    const targetIndex = sectionGames.findIndex(game => game.id === targetGameId);
+
+    if (draggedIndex !== -1 && targetIndex !== -1) {
+      const newGames = [...games];
+      const draggedGameIndex = newGames.findIndex(game => game.id === draggedGame);
+      const targetGameIndex = newGames.findIndex(game => game.id === targetGameId);
+      
+      if (draggedGameIndex !== -1 && targetGameIndex !== -1) {
+        const [draggedItem] = newGames.splice(draggedGameIndex, 1);
+        newGames.splice(targetGameIndex, 0, draggedItem);
+        
+        setGames(newGames);
+        storage.saveGames(newGames);
+      }
+    }
+    
+    setDraggedGame(null);
   };
 
   const handleExportData = () => {
@@ -185,6 +225,9 @@ const Index = () => {
       );
     })
     .sort((a, b) => {
+      // If manual sorting is disabled (when sortBy is 'manual'), maintain current order
+      if (sortBy === 'manual') return 0;
+      
       switch (sortBy) {
         case 'alphabetical':
           return a.title.localeCompare(b.title);
@@ -320,12 +363,26 @@ const Index = () => {
                       ) : (
                         <div className="animate-fade-in">
                           {filteredAndSortedGames.map(game => (
-                            <GameCard
+                            <div
                               key={game.id}
-                              game={game}
-                              onUpdateGame={handleUpdateGame}
-                              onDeleteGame={handleDeleteGame}
-                            />
+                              className={`transition-all ${draggedGame === game.id ? 'opacity-50' : ''}`}
+                              draggable={sortBy === 'manual'}
+                              onDragStart={(e) => handleGameDragStart(e, game.id)}
+                              onDragOver={handleGameDragOver}
+                              onDrop={(e) => handleGameDrop(e, game.id)}
+                            >
+                              {sortBy === 'manual' && (
+                                <div className="flex items-center mb-2">
+                                  <GripVertical size={16} className="text-muted-foreground cursor-grab mr-2" />
+                                  <span className="text-xs text-muted-foreground">Drag to reorder</span>
+                                </div>
+                              )}
+                              <GameCard
+                                game={game}
+                                onUpdateGame={handleUpdateGame}
+                                onDeleteGame={handleDeleteGame}
+                              />
+                            </div>
                           ))}
                         </div>
                       )}
