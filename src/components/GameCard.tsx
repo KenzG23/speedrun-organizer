@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Game, Category } from '@/types/speedrun';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -131,20 +132,20 @@ export const GameCard: React.FC<GameCardProps> = ({ game, onUpdateGame, onDelete
   return (
     <>
       <Card className="w-full mb-4 transition-all duration-200 hover:shadow-lg animate-fade-in">
-        <CardHeader className="pb-3">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex items-center space-x-3 flex-1 min-w-0">
+        <CardHeader className="pb-3 p-3 sm:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+            <div className="flex items-start space-x-3 flex-1 min-w-0">
               <img
                 src={game.image || '/placeholder.svg'}
                 alt={game.title}
-                className="w-12 h-12 rounded object-cover flex-shrink-0"
+                className="w-16 h-16 sm:w-12 sm:h-12 rounded object-cover flex-shrink-0"
               />
               <div className="min-w-0 flex-1">
-                <CardTitle className="text-base sm:text-lg truncate flex items-center gap-2">
-                  {game.title}
-                  {game.isFavorite && <Star size={16} className="fill-yellow-400 text-yellow-400" />}
+                <CardTitle className="text-lg sm:text-base md:text-lg break-words flex items-start sm:items-center gap-2 flex-col sm:flex-row">
+                  <span className="break-words">{game.title}</span>
+                  {game.isFavorite && <Star size={16} className="fill-yellow-400 text-yellow-400 flex-shrink-0" />}
                 </CardTitle>
-                <div className="flex flex-wrap gap-1 mt-1">
+                <div className="flex flex-wrap gap-1 mt-2">
                   {visibleTags.map(tag => (
                     <Badge key={tag} variant="secondary" className="text-xs">
                       {tag}
@@ -154,7 +155,7 @@ export const GameCard: React.FC<GameCardProps> = ({ game, onUpdateGame, onDelete
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-5 px-1 text-xs"
+                      className="h-5 px-2 text-xs"
                       onClick={() => setShowAllTags(true)}
                     >
                       (+{remainingTagsCount})
@@ -164,7 +165,7 @@ export const GameCard: React.FC<GameCardProps> = ({ game, onUpdateGame, onDelete
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-5 px-1 text-xs"
+                      className="h-5 px-2 text-xs"
                       onClick={() => setShowAllTags(false)}
                     >
                       Show less
@@ -173,7 +174,7 @@ export const GameCard: React.FC<GameCardProps> = ({ game, onUpdateGame, onDelete
                 </div>
               </div>
             </div>
-            <div className="flex items-center space-x-1 flex-shrink-0">
+            <div className="flex items-center justify-end sm:justify-start space-x-1 flex-shrink-0 self-start">
               <Button
                 variant="ghost"
                 size="sm"
@@ -214,7 +215,7 @@ export const GameCard: React.FC<GameCardProps> = ({ game, onUpdateGame, onDelete
         </CardHeader>
 
         {isExpanded && (
-          <CardContent className="pt-0 space-y-3 animate-accordion-down">
+          <CardContent className="pt-0 space-y-3 animate-accordion-down p-3 sm:p-6 sm:pt-0">
             {game.categories.map(category => (
               <div 
                 key={category.id} 
@@ -226,13 +227,13 @@ export const GameCard: React.FC<GameCardProps> = ({ game, onUpdateGame, onDelete
                 onDragOver={handleCategoryDragOver}
                 onDrop={(e) => handleCategoryDrop(e, category.id)}
               >
-                <div className="flex items-center justify-between mb-3">
+                <div className="flex items-start sm:items-center justify-between mb-3 flex-col sm:flex-row gap-2">
                   <div className="flex items-center gap-2">
                     <GripVertical size={12} className="text-muted-foreground cursor-grab" />
-                    <h4 className="font-medium text-sm">{category.name}</h4>
+                    <h4 className="font-medium text-sm break-words">{category.name}</h4>
                     {category.isFavorite && <Star size={12} className="fill-yellow-400 text-yellow-400" />}
                   </div>
-                  <div className="flex gap-1">
+                  <div className="flex gap-1 flex-shrink-0">
                     <Button
                       variant="ghost"
                       size="sm"
@@ -260,7 +261,7 @@ export const GameCard: React.FC<GameCardProps> = ({ game, onUpdateGame, onDelete
                   </div>
                 </div>
                 
-                <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground mb-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-muted-foreground mb-2">
                   <div>Placement: {category.placement}</div>
                   <div>PB: {category.pbTime}</div>
                   {category.placement > 1 && (
@@ -274,7 +275,7 @@ export const GameCard: React.FC<GameCardProps> = ({ game, onUpdateGame, onDelete
                 {category.variables && (
                   <div className="mb-2">
                     <span className="text-xs font-medium">Variables: </span>
-                    <span className="text-xs text-muted-foreground">{category.variables}</span>
+                    <span className="text-xs text-muted-foreground break-words">{category.variables}</span>
                   </div>
                 )}
 
